@@ -1,24 +1,73 @@
 const express = require("express");
+const path = require("path");
 const app = express();
-const logger = require("./logger");
-const authorize = require("./authorize");
+let { people } = require("./data");
 
-// app.use -> Use for executing all requests coming
+// static assets
+app.use(express.static(path.join(__dirname, "public")));
 
-// 1. use vs route
-// 2. options - our own / express / third party
-app.use([authorize, logger]);
-
-// req => middleware => res
-app.get("/", (req, res) => {
-  res.send("Hello World");
+// parse form data
+app.use(express.urlencoded({ extended: false }));
+// parse json
+app.use(express.json());
+// Get Method
+app.get("/api/people", (req, res) => {
+  res.status(200).json({ success: true, data: people });
 });
 
-app.get("/api/products", (req, res) => {
-  console.log(req.user);
-  res.send("Products");
+app.post("/api/people", (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res
+      .status(400)
+      .json({ success: false, msg: "please provide name value" });
+  }
+  res.status(201).json({ success: true, person: name });
 });
 
+app.post("/api/postman/people", (req, res) => {
+  const { name } = req.body;
+  if (!name) {
+    return res
+      .status(400)
+      .json({ success: false, msg: "please provide name value" });
+  }
+  res.status(201).json({ success: true, data: [...people] });
+});
+// Post Method
+app.post("/login", (req, res) => {
+  const { name } = req.body;
+  if (name) {
+    return res.status(200).send(`Welcome ${name}`);
+  }
+  res.status(401).send("Please provide credentials");
+});
+
+app.put("/api/people/:id", (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const findPerson = people.find((person) => {
+    return person.id === Number(id);
+  });
+
+  if (findPerson) {
+    findPerson.name = name;
+    return res.json({ success: true, data: people });
+  } else return res.json({ success: false, msg: "please provide name value" });
+});
+app.delete("/api/people/:id", (req, res) => {
+  const { id } = req.params;
+  const findPerson = people.find((person) => {
+    return person.id === Number(id);
+  });
+  if (!findPerson) {
+    return res
+      .status(404)
+      .json({ success: false, msg: `no person with ${id} provided` });
+  }
+  const newPeople = people.filter((person) => person.id !== Number(id));
+  return res.status(200).json({ success: true, data: newPeople });
+});
 app.listen(5000, () => {
   console.log("Server is running");
 });
